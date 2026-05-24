@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linea Studio</title>
+
+  <style>
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #f4efe8;
+      --surface: #ece2d7;
+      --ink: #161311;
+      --muted: #6f655d;
+      --accent: #8a3a08;
+      --accent-light: rgba(138, 58, 8, 0.12);
+      --line: rgba(22, 19, 17, 0.08);
+      --container: 1180px;
+
+      /* glass vars */
+      --glass-bg: rgba(255, 252, 248, 0.45);
+      --glass-bg-dark: rgba(22, 19, 17, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --glass-border-dark: rgba(255, 255, 255, 0.12);
+      --glass-shadow: 0 8px 40px rgba(22, 19, 17, 0.08), 0 2px 8px rgba(22, 19, 17, 0.04);
+      --glass-shadow-hover: 0 20px 60px rgba(22, 19, 17, 0.12), 0 4px 16px rgba(138, 58, 8, 0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+      font-family: "Georgia", serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* subtle grain texture on bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; color: inherit; }
+
+    .container {
+      width: min(var(--container), 92%);
+      margin: auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── LIQUID GLASS MIXIN ─── */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+    }
+
+    .glass-dark {
+      background: var(--glass-bg-dark);
+      backdrop-filter: blur(24px) saturate(150%);
+      -webkit-backdrop-filter: blur(24px) saturate(150%);
+      border: 1px solid var(--glass-border-dark);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* ─── BACKGROUND ORBS ─── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .orb-1 {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(138, 58, 8, 0.12) 0%, transparent 70%);
+      top: -200px;
+      right: -150px;
+      animation: drift1 18s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(180, 120, 60, 0.08) 0%, transparent 70%);
+      bottom: 20%;
+      left: -100px;
+      animation: drift2 22s ease-in-out infinite;
+    }
+
+    .orb-3 {
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(138, 58, 8, 0.07) 0%, transparent 70%);
+      top: 50%;
+      right: 10%;
+      animation: drift3 26s ease-in-out infinite;
+    }
+
+    @keyframes drift1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(-40px, 30px) scale(1.05); }
+      66% { transform: translate(20px, -20px) scale(0.98); }
+    }
+
+    @keyframes drift2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, -40px) scale(1.08); }
+    }
+
+    @keyframes drift3 {
+      0%, 100% { transform: translate(0, 0); }
+      40% { transform: translate(-20px, 25px); }
+      70% { transform: translate(15px, -15px); }
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 999;
+      transition: 0.4s ease;
+      padding: 12px 0;
+    }
+
+    nav.scrolled .nav-inner {
+      background: rgba(244, 239, 232, 0.6);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border-color: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 4px 24px rgba(22, 19, 17, 0.08), 0 1px 4px rgba(22, 19, 17, 0.04);
+    }
+
+    .nav-inner {
+      max-width: calc(var(--container) - 40px);
+      margin: 0 auto;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      transition: 0.4s ease;
+      padding: 0 32px;
+    }
+
+    .nav-wrap {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: "Georgia", serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.15em;
+      font-weight: normal;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    .nav-links a {
+      font-family: "Georgia", serif;
+      font-style: italic;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      transition: 0.25s ease;
+    }
+
+    .nav-links a:hover { color: var(--ink); }
+
+    .nav-btn {
+      padding: 11px 24px;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 50px;
+      box-shadow: 0 2px 12px rgba(22, 19, 17, 0.06);
+      color: var(--ink) !important;
+      transition: 0.3s ease !important;
+      font-style: italic;
+    }
+
+    .nav-btn:hover {
+      background: rgba(138, 58, 8, 0.1) !important;
+      border-color: rgba(138, 58, 8, 0.3) !important;
+      color: var(--accent) !important;
+      transform: none;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding-top: 100px;
+    }
+
+    .hero-content {
+      max-width: 920px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      color: var(--accent);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      font-size: 0.73rem;
+      padding: 10px 22px;
+      background: rgba(138, 58, 8, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(138, 58, 8, 0.15);
+      border-radius: 50px;
+      box-shadow: 0 2px 12px rgba(138, 58, 8, 0.06);
+    }
+
+    .hero-tag::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.7;
+    }
+
+    h1 {
+      font-family: "Georgia", serif;
+      font-size: clamp(4.2rem, 9vw, 8rem);
+      line-height: 0.9;
+      letter-spacing: 0.04em;
+      font-weight: normal;
+      text-transform: uppercase;
+      margin-bottom: 30px;
+    }
+
+    h1 em {
+      color: var(--accent);
+      font-style: normal;
+      position: relative;
+    }
+
+    /* glass underline accent */
+    h1 em::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0.4;
+    }
+
+    .hero-text {
+      max-width: 620px;
+      margin: 0 auto 40px;
+      color: var(--muted);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      line-height: 1.9;
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 15px 32px;
+      font-family: "Georgia", serif;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.78rem;
+      transition: 0.3s ease;
+      border: none;
+      cursor: pointer;
+      border-radius: 50px;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 20px rgba(138, 58, 8, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(138, 58, 8, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 4px 16px rgba(22, 19, 17, 0.06);
+      color: var(--ink);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.75);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(22, 19, 17, 0.1);
+    }
+
+
+
+    /* ─── SECTIONS ─── */
+    section { padding: 120px 0; }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      color: var(--accent);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      font-size: 0.72rem;
+    }
+
+    .section-label::before {
+      content: '';
+      width: 24px;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.5;
+    }
+
+    h2 {
+      font-family: "Georgia", serif;
+      font-size: clamp(3rem, 6vw, 5.5rem);
+      line-height: 0.92;
+      letter-spacing: 0.04em;
+      font-weight: normal;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .section-desc {
+      max-width: 580px;
+      color: var(--muted);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      line-height: 1.9;
+      font-size: 1rem;
+    }
+
+    /* ─── SERVICES ─── */
+    .services-grid {
+      margin-top: 72px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .service-card {
+      padding: 40px 36px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid var(--glass-border);
+      border-radius: 28px;
+      box-shadow: var(--glass-shadow);
+      transition: 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* inner glass highlight */
+    .service-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+    }
+
+    /* inner glass reflection */
+    .service-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+      pointer-events: none;
+      border-radius: 28px 28px 0 0;
+    }
+
+    .service-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--glass-shadow-hover);
+      border-color: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 252, 248, 0.65);
+    }
+
+    .service-number {
+      margin-bottom: 24px;
+      color: var(--accent);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    .service-card h3 {
+      font-family: "Georgia", serif;
+      font-size: 2rem;
+      letter-spacing: 0.04em;
+      font-weight: normal;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      line-height: 1;
+    }
+
+    .service-card p {
+      color: var(--muted);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      line-height: 1.8;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+    }
+
+    .service-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.68rem;
+      padding: 7px 16px;
+      background: rgba(138, 58, 8, 0.07);
+      border: 1px solid rgba(138, 58, 8, 0.15);
+      border-radius: 50px;
+    }
+
+    /* ─── PROCESS ─── */
+    .process {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .process-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(236, 226, 215, 0.6);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+
+    .process-border-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), var(--line), transparent);
+    }
+
+    .process-border-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), var(--line), transparent);
+    }
+
+    .process-grid {
+      margin-top: 64px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .process-item {
+      padding: 32px 28px;
+      background: rgba(255, 252, 248, 0.35);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 22px;
+      box-shadow: 0 4px 20px rgba(22, 19, 17, 0.05);
+      transition: 0.3s ease;
+    }
+
+    .process-item:hover {
+      background: rgba(255, 252, 248, 0.55);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(22, 19, 17, 0.08);
+    }
+
+    .process-item strong {
+      display: block;
+      margin-bottom: 16px;
+      color: rgba(138, 58, 8, 0.25);
+      font-family: "Georgia", serif;
+      font-size: 3rem;
+      font-weight: normal;
+      font-style: italic;
+    }
+
+    .process-item h4 {
+      margin-bottom: 12px;
+      font-family: "Georgia", serif;
+      font-size: 1.1rem;
+      font-weight: normal;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .process-item p {
+      color: var(--muted);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      line-height: 1.8;
+      font-size: 0.92rem;
+    }
+
+    /* ─── CTA ─── */
+    .cta-box {
+      background: linear-gradient(145deg, rgba(28, 22, 18, 0.92) 0%, rgba(18, 13, 10, 0.96) 100%);
+      backdrop-filter: blur(40px) saturate(160%);
+      -webkit-backdrop-filter: blur(40px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 44px;
+      padding: 100px 60px 96px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      color: var(--bg);
+      box-shadow:
+        0 32px 100px rgba(10, 6, 4, 0.45),
+        0 8px 32px rgba(10, 6, 4, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    }
+
+    /* amber accent stripe at top */
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(138, 58, 8, 0.9), rgba(200, 110, 30, 0.7), rgba(138, 58, 8, 0.9), transparent);
+      border-radius: 0 0 4px 4px;
+    }
+
+    /* large warm radial glow — bottom-left */
+    .cta-box::after {
+      content: '';
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(138, 58, 8, 0.2) 0%, rgba(138, 58, 8, 0.06) 45%, transparent 70%);
+      bottom: -320px;
+      left: -180px;
+      pointer-events: none;
+    }
+
+    /* extra glow top-right */
+    .cta-box .cta-orb-right {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(180, 90, 20, 0.14) 0%, transparent 65%);
+      top: -200px;
+      right: -140px;
+      pointer-events: none;
+    }
+
+    /* horizontal divider line above button */
+    .cta-divider {
+      width: 48px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(138, 58, 8, 0.6), transparent);
+      margin: 0 auto 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* decorative corner marks */
+    .cta-corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: rgba(255, 255, 255, 0.08);
+      border-style: solid;
+    }
+    .cta-corner-tl { top: 24px; left: 24px; border-width: 1px 0 0 1px; border-radius: 6px 0 0 0; }
+    .cta-corner-tr { top: 24px; right: 24px; border-width: 1px 1px 0 0; border-radius: 0 6px 0 0; }
+    .cta-corner-bl { bottom: 24px; left: 24px; border-width: 0 0 1px 1px; border-radius: 0 0 0 6px; }
+    .cta-corner-br { bottom: 24px; right: 24px; border-width: 0 1px 1px 0; border-radius: 0 0 6px 0; }
+
+    .cta-box .section-label {
+      color: rgba(138, 58, 8, 0.75);
+      position: relative;
+      z-index: 1;
+    }
+    .cta-box .section-label::before { background: rgba(138, 58, 8, 0.5); }
+
+    .cta-box h2 {
+      color: var(--bg);
+      margin-bottom: 22px;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 2px 30px rgba(0,0,0,0.4);
+    }
+
+    .cta-box p {
+      max-width: 480px;
+      margin: 0 auto 32px;
+      color: rgba(244, 239, 232, 0.55);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      line-height: 1.9;
+      font-size: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-box .btn-primary {
+      background: linear-gradient(135deg, rgba(160, 70, 12, 0.95), rgba(120, 46, 6, 0.95));
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(200, 110, 30, 0.35);
+      box-shadow:
+        0 6px 28px rgba(138, 58, 8, 0.5),
+        0 2px 8px rgba(138, 58, 8, 0.3),
+        inset 0 1px 0 rgba(255, 200, 120, 0.15);
+      position: relative;
+      z-index: 1;
+      letter-spacing: 0.2em;
+    }
+
+    .cta-box .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(175, 80, 15, 1), rgba(138, 58, 8, 1));
+      box-shadow:
+        0 10px 40px rgba(138, 58, 8, 0.6),
+        0 4px 14px rgba(138, 58, 8, 0.35),
+        inset 0 1px 0 rgba(255, 200, 120, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* ─── FOOTER ─── */
+    footer { padding: 36px 0 60px; }
+
+    .footer-wrap {
+      border-top: 1px solid var(--line);
+      padding-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      color: var(--muted);
+      font-family: "Georgia", serif;
+      font-style: italic;
+      font-size: 0.88rem;
+    }
+
+    .footer-wrap strong {
+      color: var(--ink);
+      font-style: normal;
+    }
+
+    /* ─── FADE-IN ANIMATION ─── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fade-up-delay-1 { transition-delay: 0.1s; }
+    .fade-up-delay-2 { transition-delay: 0.2s; }
+    .fade-up-delay-3 { transition-delay: 0.3s; }
+    .fade-up-delay-4 { transition-delay: 0.4s; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1024px) {
+      .services-grid { grid-template-columns: repeat(2, 1fr); }
+      .process-grid { grid-template-columns: repeat(2, 1fr); }
+      h1 { font-size: 5.5rem; }
+      h2 { font-size: 4rem; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-inner { max-width: 92%; }
+      .nav-links { display: none; }
+
+      .hero { min-height: auto; padding: 130px 0 90px; }
+      .hero-grid { padding-top: 0; }
+
+      h1 { font-size: 3.8rem; line-height: 0.92; }
+
+      .hero-actions { flex-direction: column; align-items: center; }
+      .btn-primary, .btn-secondary { width: 100%; max-width: 300px; text-align: center; }
+
+      section { padding: 90px 0; }
+      h2 { font-size: 3rem; }
+
+      .services-grid, .process-grid { grid-template-columns: 1fr; }
+      .service-card { padding: 32px; }
+
+      .cta-box { padding: 64px 24px; border-radius: 28px; }
+      .footer-wrap { flex-direction: column; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .container { width: 90%; }
+      h1 { font-size: 3rem; }
+      h2 { font-size: 2.6rem; }
+      .hero-tag { font-size: 0.64rem; }
+      .hero-text { font-size: 0.92rem; }
+      .service-card h3 { font-size: 1.7rem; }
+      .process-item strong { font-size: 2.6rem; }
+    }
+
+  </style>
+
+</head>
+<body>
+
+  <!-- bg orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- NAV -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <div class="nav-wrap">
+
+        <a href="#" class="logo logo-svg" aria-label="Linea Studio">
+          <svg width="110" height="44" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+            <g>
+              <g transform="matrix(1.32958,0,0,1.32958,-173.73946,-177.973097)">
+                <g transform="matrix(1.13153,0,0,1.13153,-74.453265,-60.927977)">
+                  <text x="459.623px" y="587.647px" style="font-family:'Arial Narrow',Arial,sans-serif;font-style:italic;font-stretch:condensed;font-size:158.06px;fill:rgb(140,58,0);">S<tspan x="534.998px 559.976px 620.996px 682.016px 699.739px" y="587.647px 587.647px 587.647px 587.647px 587.647px">tudio</tspan></text>
+                </g>
+                <g transform="matrix(0.752629,0,0,0.752629,125.000267,128.194718)">
+                  <g transform="matrix(0.99932,-0,-0,0.99932,7.536502,7.522871)">
+                    <use xlink:href="#_NavLogo" x="194.69" y="487.387" width="226px" height="106px"/>
+                  </g>
+                </g>
+              </g>
+            </g>
+            <defs>
+              <image id="_NavLogo" width="226px" height="106px" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOIAAABqCAYAAACh841iAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAKF0lEQVR4nO3dfbBVVR3G8e9VbsirprQC8sabiSii9rJMm0aNIkNF00idMsZM+0drcpqpcTJzzBeGrBinqUwsirIa04QhK1HKUaGFpqEEDYg6kMaSGCHe4nKhP/aGrudlc+45a+2z7znPZ+bM1bPv/a3fuZzn7r3Pflkd1rCfOF50nuNiFLaGCcC6wGXvdJ4vB64pUpPDmt2AiCiIIoWgIIoUgIIoUgAKokgBKIgiBaAgihSAgihSAAqiSAEoiCIFoCCKFICCKFIACqJIASiIIgUwoNkN1GkDMDlwzX8HridSs34ZROfZA6xqdh8ioWjTVKQAFESRAuiXm6bWMBCYFLjs687zz15jDAImBh5jk/O8VvqkNQwARgNdFR5DgfUktwZZB6wF1jvPzsC9HVL6O5lEsn8+ARie9jes19ceYHv62JF+3Zb2vRpY4zw78u49S/r7H0/y2iYCI0hez4HHEGAQsAv4T8njZeB54AXn2V5vD/0yiMCxwLOBa94Jb7pnzYQIY3wTuBHAGkYDnwI+TfLG7svWSbc1LADmOM/qwD0eZA1HARcCM4ApJL+TjgB1XwFWAouAhc6zqdGafRx/MPBRktf2XuBdwFsC1F1P8p55EHio1872yiWIAABJREFUL8HsS0EUKYEtxJmmG3ml2jmW8AAAAElFTkSuQmCC"/>
+            </defs>
+          </svg>
+        </a>
+
+        <div class="nav-links">
+          <a href="#servicos">Serviços</a>
+          <a href="#processo">Processo</a>
+          <a href="#contato">Contato</a>
+          <a href="#contato" class="nav-links a nav-btn">Orçamento</a>
+        </div>
+
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+
+        <span class="hero-tag fade-up">Design Studio</span>
+
+        <h1 class="fade-up fade-up-delay-1">
+          FORMA.<br>
+          RITMO.<br>
+          <em>PRESENÇA.</em>
+        </h1>
+
+        <p class="hero-text fade-up fade-up-delay-2">
+          Criamos identidades visuais minimalistas
+          e sofisticadas para marcas que desejam
+          transmitir valor, direção e consistência visual.
+        </p>
+
+        <div class="hero-actions fade-up fade-up-delay-3">
+          <a href="#servicos" class="btn-primary">Explorar serviços</a>
+          <a href="#processo" class="btn-secondary">Nosso processo</a>
+        </div>
+
+      </div>
+    </div>
+
+  
+  </section>
+
+  <!-- SERVIÇOS -->
+  <section id="servicos">
+    <div class="container">
+
+      <span class="section-label fade-up">Serviços</span>
+
+      <h2 class="fade-up fade-up-delay-1">
+        DESIGN PARA<br>
+        PERCEPÇÃO.
+      </h2>
+
+      <p class="section-desc fade-up fade-up-delay-2">
+        Identidade visual, social media,
+        apresentações e direção criativa com foco
+        em sofisticação visual e posicionamento.
+      </p>
+
+      <div class="services-grid">
+
+        <article class="service-card fade-up fade-up-delay-1">
+          <div class="service-number">01</div>
+          <h3>Branding</h3>
+          <p>Construção de identidades visuais elegantes e alinhadas ao posicionamento da marca.</p>
+          <span class="service-tag">Identidade Visual</span>
+        </article>
+
+        <article class="service-card fade-up fade-up-delay-2">
+          <div class="service-number">02</div>
+          <h3>Social</h3>
+          <p>Conteúdo visual refinado para Instagram, campanhas e presença digital consistente.</p>
+          <span class="service-tag">Social Media</span>
+        </article>
+
+        <article class="service-card fade-up fade-up-delay-3">
+          <div class="service-number">03</div>
+          <h3>Editorial</h3>
+          <p>Apresentações, propostas e materiais institucionais com linguagem premium.</p>
+          <span class="service-tag">Apresentações</span>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESSO -->
+  <section class="process" id="processo">
+    <div class="process-bg"></div>
+    <div class="process-border-top"></div>
+    <div class="process-border-bottom"></div>
+
+    <div class="container">
+
+      <span class="section-label fade-up">Processo</span>
+
+      <h2 class="fade-up fade-up-delay-1">
+        MENOS EXCESSO.<br>
+        MAIS INTENÇÃO.
+      </h2>
+
+      <div class="process-grid">
+
+        <div class="process-item fade-up fade-up-delay-1">
+          <strong>01</strong>
+          <h4>Imersão</h4>
+          <p>Entendimento profundo da marca, público e posicionamento.</p>
+        </div>
+
+        <div class="process-item fade-up fade-up-delay-2">
+          <strong>02</strong>
+          <h4>Direção</h4>
+          <p>Construção da direção visual baseada em percepção e coerência.</p>
+        </div>
+
+        <div class="process-item fade-up fade-up-delay-3">
+          <strong>03</strong>
+          <h4>Desenvolvimento</h4>
+          <p>Desenvolvimento do sistema visual com consistência e precisão.</p>
+        </div>
+
+        <div class="process-item fade-up fade-up-delay-4">
+          <strong>04</strong>
+          <h4>Entrega</h4>
+          <p>Arquivos organizados e materiais prontos para aplicação imediata.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="contato">
+    <div class="container">
+      <div class="cta-box fade-up">
+
+        <!-- decorative elements -->
+        <div class="cta-orb-right"></div>
+        <div class="cta-corner cta-corner-tl"></div>
+        <div class="cta-corner cta-corner-tr"></div>
+        <div class="cta-corner cta-corner-bl"></div>
+        <div class="cta-corner cta-corner-br"></div>
+
+        <span class="section-label">Linea Studio</span>
+
+        <h2>
+          SUA MARCA MERECE<br>
+          MAIS PRESENÇA.
+        </h2>
+
+        <p>
+          Entre em contato para criar uma
+          identidade visual alinhada ao posicionamento
+          da sua marca.
+        </p>
+
+        <div class="cta-divider"></div>
+
+        <a href="https://wa.whatsapp.com" target="_blank" class="btn-primary">
+          Falar no WhatsApp
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container footer-wrap">
+      <span>© 2026 <strong>Linea Studio</strong></span>
+      <span>Design minimalista para marcas modernas.</span>
+      <span>Curitiba · Paraná</span>
+    </div>
+  </footer>
+
+  <script>
+
+    // nav scroll
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // fade-up on scroll
+    const fadeEls = document.querySelectorAll('.fade-up');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.12 });
+
+    fadeEls.forEach(el => observer.observe(el));
+
+    // hero elements trigger immediately
+    document.querySelectorAll('.hero .fade-up').forEach((el, i) => {
+      setTimeout(() => el.classList.add('visible'), 150 + i * 120);
+    });
+
+  </script>
+
+</body>
+</html>
